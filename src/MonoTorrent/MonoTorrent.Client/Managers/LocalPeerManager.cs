@@ -60,17 +60,12 @@ namespace MonoTorrent.Client
             string message = String.Format("BT-SEARCH * HTTP/1.1\r\nHost: 239.192.152.143:6771\r\nPort: {0}\r\nInfohash: {1}\r\n\r\n\r\n", manager.Engine.Settings.ListenPort, manager.InfoHash.ToHex());
 
             byte[] data = Encoding.ASCII.GetBytes(message);
-            NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
-            foreach (NetworkInterface adapter in nics)
-            {
-                IPv4InterfaceProperties p = adapter.GetIPProperties().GetIPv4Properties();
-                if (null == p)
-                    continue;
-
-                socket.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, (int)IPAddress.HostToNetworkOrder(p.Index));
-
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {      
                 try
                 {
+                    if (!nic.SupportsMulticast) continue;
+                    socket.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, IPAddress.HostToNetworkOrder(nic.GetIPProperties().GetIPv4Properties().Index));
                     socket.Send(data, data.Length, ep);
                 }
                 catch
