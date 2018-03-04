@@ -67,7 +67,7 @@ namespace MonoTorrent.Client
 		  if (!adapter.SupportsMulticast)
 		    continue; 
 		  if (OperationalStatus.Up != adapter.OperationalStatus)
-		    continue; /
+		    continue; 
 		  IPv4InterfaceProperties p = adapter.GetIPProperties().GetIPv4Properties();
 		  if (null == p)
 		    continue; 
