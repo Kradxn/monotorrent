@@ -35,13 +35,14 @@ using System.Timers;
 using MonoTorrent;
 using MonoTorrent.Common;
 using MonoTorrent.Client;
+using System.Net.NetworkInformation;
 
 namespace MonoTorrent.Client
 {
     class LocalPeerManager : IDisposable
     {
         private const int port = 6771;
-        
+
         private UdpClient socket;
         private IPEndPoint ep;
 
@@ -55,34 +56,28 @@ namespace MonoTorrent.Client
         {
             if (manager.HasMetadata && manager.Torrent.IsPrivate)
                 return;
-            
+
             string message = String.Format("BT-SEARCH * HTTP/1.1\r\nHost: 239.192.152.143:6771\r\nPort: {0}\r\nInfohash: {1}\r\n\r\n\r\n", manager.Engine.Settings.ListenPort, manager.InfoHash.ToHex());
-            byte[] data = Encoding.ASCII.GetBytes(message);  
-	    NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
-	    foreach (NetworkInterface adapter in nics)
-            {  
-	    	IPInterfaceProperties ip_properties = adapter.GetIPProperties();
-		  if (!adapter.GetIPProperties().MulticastAddresses.Any())
-		    continue; 
-		  if (!adapter.SupportsMulticast)
-		    continue; 
-		  if (OperationalStatus.Up != adapter.OperationalStatus)
-		    continue; 
-		  IPv4InterfaceProperties p = adapter.GetIPProperties().GetIPv4Properties();
-		  if (null == p)
-		    continue; 
 
-		  socket.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, (int)IPAddress.HostToNetworkOrder(p.Index));
+            byte[] data = Encoding.ASCII.GetBytes(message);
+            NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
+            foreach (NetworkInterface adapter in nics)
+            {
+                IPv4InterfaceProperties p = adapter.GetIPProperties().GetIPv4Properties();
+                if (null == p)
+                    continue;
 
-			try
-			{
-				socket.Send(data, data.Length, ep);
-			}
-			catch
-			{
-				// If data can't be sent, just ignore the error
-			}
-		}
+                socket.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, (int)IPAddress.HostToNetworkOrder(p.Index));
+
+                try
+                {
+                    socket.Send(data, data.Length, ep);
+                }
+                catch
+                {
+                    // If data can't be sent, just ignore the error
+                }
+            }
         }
 
         public void Dispose()
