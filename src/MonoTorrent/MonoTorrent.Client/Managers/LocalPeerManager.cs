@@ -57,7 +57,23 @@ namespace MonoTorrent.Client
                 return;
             
             string message = String.Format("BT-SEARCH * HTTP/1.1\r\nHost: 239.192.152.143:6771\r\nPort: {0}\r\nInfohash: {1}\r\n\r\n\r\n", manager.Engine.Settings.ListenPort, manager.InfoHash.ToHex());
-            byte[] data = Encoding.ASCII.GetBytes(message);
+            byte[] data = Encoding.ASCII.GetBytes(message);  
+	    NetworkInterface[] nics = NetworkInterface.GetAllNetworkInterfaces();
+	    foreach (NetworkInterface adapter in nics)
+            {  
+	    	IPInterfaceProperties ip_properties = adapter.GetIPProperties();
+		  if (!adapter.GetIPProperties().MulticastAddresses.Any())
+		    continue; 
+		  if (!adapter.SupportsMulticast)
+		    continue; 
+		  if (OperationalStatus.Up != adapter.OperationalStatus)
+		    continue; /
+		  IPv4InterfaceProperties p = adapter.GetIPProperties().GetIPv4Properties();
+		  if (null == p)
+		    continue; 
+
+		  socket.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastInterface, (int)IPAddress.HostToNetworkOrder(p.Index));
+
 			try
 			{
 				socket.Send(data, data.Length, ep);
@@ -66,6 +82,7 @@ namespace MonoTorrent.Client
 			{
 				// If data can't be sent, just ignore the error
 			}
+		}
         }
 
         public void Dispose()
